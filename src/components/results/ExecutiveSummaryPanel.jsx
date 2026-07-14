@@ -6,7 +6,7 @@ export default function ExecutiveSummaryPanel({ summary, aiStatus, aiSummary }) 
   const text = isPersonalized ? aiSummary : summary
 
   return (
-    <div className="rounded-2xl border border-ink-200 bg-white p-8 shadow-sm">
+    <div className="card-surface rounded-2xl border border-ink-200 bg-white p-8">
       {(isPersonalized || isLoading) && (
         <div className="mb-3">
           {isPersonalized ? (

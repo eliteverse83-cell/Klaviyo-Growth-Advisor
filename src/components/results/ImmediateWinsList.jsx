@@ -23,7 +23,7 @@ export default function ImmediateWinsList({ wins }) {
       {wins.map((win, index) => (
         <div
           key={index}
-          className="flex items-start gap-4 rounded-xl border border-ink-200 bg-white p-5 shadow-sm"
+          className="card-surface card-surface-interactive flex items-start gap-4 rounded-xl border border-ink-200 bg-white p-5"
         >
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
             {index + 1}

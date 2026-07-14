@@ -19,11 +19,11 @@ export default function ProgressIndicator({ steps, currentStep }) {
           >
             <div className="flex flex-col items-center gap-2">
               <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors ${
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-300 ${
                   isCompleted
                     ? 'border-brand-600 bg-brand-600 text-white'
                     : isActive
-                      ? 'border-brand-600 bg-white text-brand-600'
+                      ? 'scale-110 border-brand-600 bg-white text-brand-600 ring-4 ring-brand-100'
                       : 'border-ink-200 bg-white text-ink-400'
                 }`}
               >
@@ -40,7 +40,7 @@ export default function ProgressIndicator({ steps, currentStep }) {
 
             {!isLast && (
               <div
-                className={`mx-2 h-0.5 flex-1 rounded transition-colors sm:mx-3 ${
+                className={`mx-2 h-0.5 flex-1 rounded transition-colors duration-500 sm:mx-3 ${
                   isCompleted ? 'bg-brand-600' : 'bg-ink-200'
                 }`}
               />

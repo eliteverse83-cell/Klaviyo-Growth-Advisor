@@ -4,7 +4,7 @@ import { formatCurrency } from '../../utils/formatCurrency.js'
 export default function RevenueGrowthPanel({ revenueGrowth }) {
   if (!revenueGrowth) {
     return (
-      <div className="rounded-2xl border border-ink-200 bg-white p-8 text-center shadow-sm">
+      <div className="card-surface rounded-2xl border border-ink-200 bg-white p-8 text-center">
         <p className="text-sm text-ink-500">
           Add your monthly revenue in the audit to see a growth projection.
         </p>
@@ -15,7 +15,7 @@ export default function RevenueGrowthPanel({ revenueGrowth }) {
   const { current, potential, difference, annualLow, annualHigh } = revenueGrowth
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-panel-gradient p-8 text-white sm:p-10">
+    <div className="overflow-hidden rounded-2xl bg-panel-gradient p-8 text-white shadow-xl shadow-brand-900/25 sm:p-10">
       <div className="flex items-center gap-2 text-brand-100">
         <TrendingUp className="h-5 w-5" />
         <span className="text-sm font-semibold uppercase tracking-wide">

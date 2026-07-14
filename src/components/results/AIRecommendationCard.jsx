@@ -10,7 +10,7 @@ export default function AIRecommendationCard({ recommendation }) {
   const { title, rationale, priority, expectedImpact, implementationSteps } = recommendation
 
   return (
-    <div className="rounded-2xl border border-ink-200 bg-white p-6 shadow-sm transition-colors hover:border-brand-200">
+    <div className="card-surface card-surface-interactive rounded-2xl border border-ink-200 bg-white p-6 hover:border-brand-200">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-bold text-ink-900">{title}</h3>
         {priority && (

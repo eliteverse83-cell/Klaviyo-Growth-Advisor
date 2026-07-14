@@ -10,7 +10,7 @@ export default function RecommendationCard({ recommendation }) {
   const { priority, category, title, description, impact } = recommendation
 
   return (
-    <div className="rounded-2xl border border-ink-200 bg-white p-6 shadow-sm transition-colors hover:border-brand-200">
+    <div className="card-surface card-surface-interactive rounded-2xl border border-ink-200 bg-white p-6 hover:border-brand-200">
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={`rounded-full border px-2.5 py-1 text-xs font-bold ${PRIORITY_STYLES[priority]}`}

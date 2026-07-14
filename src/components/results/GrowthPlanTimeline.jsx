@@ -15,7 +15,10 @@ export default function GrowthPlanTimeline({ steps }) {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {steps.map((step, index) => (
-        <div key={step.phase} className="rounded-2xl border border-ink-200 bg-white p-6 shadow-sm">
+        <div
+          key={step.phase}
+          className="card-surface card-surface-interactive rounded-2xl border border-ink-200 bg-white p-6"
+        >
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">
             {index + 1}
           </span>

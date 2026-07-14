@@ -3,6 +3,7 @@ import Hero from '../components/landing/Hero.jsx'
 import FeatureCards from '../components/landing/FeatureCards.jsx'
 import Container from '../components/ui/Container.jsx'
 import Button from '../components/ui/Button.jsx'
+import Reveal from '../components/ui/Reveal.jsx'
 
 export default function LandingPage() {
   return (
@@ -12,7 +13,7 @@ export default function LandingPage() {
 
       <section className="pb-20 sm:pb-28">
         <Container>
-          <div className="relative overflow-hidden rounded-3xl bg-panel-gradient px-8 py-14 text-center sm:px-16">
+          <Reveal className="relative overflow-hidden rounded-3xl bg-panel-gradient px-8 py-14 text-center shadow-xl shadow-brand-900/20 sm:px-16">
             <div className="relative mx-auto max-w-2xl">
               <ShieldCheck className="mx-auto h-10 w-10 text-brand-200" />
               <h2 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
@@ -34,7 +35,7 @@ export default function LandingPage() {
                 </Button>
               </div>
             </div>
-          </div>
+          </Reveal>
         </Container>
       </section>
     </>

@@ -13,11 +13,14 @@ import {
   TrendingUp,
   Sparkles,
   Loader2,
+  Gauge,
 } from 'lucide-react'
 import Container from '../components/ui/Container.jsx'
 import Button from '../components/ui/Button.jsx'
+import Reveal from '../components/ui/Reveal.jsx'
 import ScoreCard from '../components/results/ScoreCard.jsx'
 import HealthRatingPanel from '../components/results/HealthRatingPanel.jsx'
+import DimensionBreakdown from '../components/results/DimensionBreakdown.jsx'
 import SectionHeading from '../components/results/SectionHeading.jsx'
 import ExecutiveSummaryPanel from '../components/results/ExecutiveSummaryPanel.jsx'
 import BiggestRevenueLeakPanel from '../components/results/BiggestRevenueLeakPanel.jsx'
@@ -83,7 +86,7 @@ export default function ResultsPage() {
   return (
     <section className="py-16 sm:py-20">
       <Container>
-        <div className="flex flex-col items-start justify-between gap-4 border-b border-ink-200 pb-8 sm:flex-row sm:items-end">
+        <Reveal className="flex flex-col items-start justify-between gap-4 border-b border-ink-200 pb-8 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold text-brand-600">Growth Audit Report</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
@@ -112,7 +115,7 @@ export default function ResultsPage() {
               Run New Audit
             </Button>
           </div>
-        </div>
+        </Reveal>
 
         {isSample && (
           <p className="mt-6 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800">
@@ -121,12 +124,20 @@ export default function ResultsPage() {
           </p>
         )}
 
-        <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_2fr]">
+        <Reveal className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_2fr]" delay={80}>
           <ScoreCard label="Overall Score" score={report.overallScore} size="lg" />
           <HealthRatingPanel maturityLevel={report.maturityLevel} />
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-8" delay={160}>
+          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink-500">
+            <Gauge className="h-4 w-4 text-brand-600" />
+            Score Breakdown by Dimension
+          </div>
+          <DimensionBreakdown dimensions={report.dimensions} />
+        </Reveal>
+
+        <Reveal className="mt-16">
           <SectionHeading
             index={1}
             icon={FileText}
@@ -138,9 +149,9 @@ export default function ResultsPage() {
             aiStatus={aiStatus}
             aiSummary={aiData?.executiveSummary}
           />
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <SectionHeading
             index={2}
             icon={AlertOctagon}
@@ -148,9 +159,9 @@ export default function ResultsPage() {
             subtitle="The single gap costing this store the most money right now."
           />
           <BiggestRevenueLeakPanel leak={report.biggestRevenueLeak} />
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <SectionHeading
             index={3}
             icon={Zap}
@@ -181,9 +192,9 @@ export default function ResultsPage() {
               <ImmediateWinsList wins={report.immediateWins} />
             </>
           )}
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <SectionHeading
             index={4}
             icon={Scale}
@@ -191,7 +202,7 @@ export default function ResultsPage() {
             subtitle="What’s working, and what’s holding your program back."
           />
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-ink-200 bg-white p-6 shadow-sm">
+            <div className="card-surface card-surface-interactive rounded-2xl border border-ink-200 bg-white p-6">
               <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-700">
                 Strengths
               </h3>
@@ -199,7 +210,7 @@ export default function ResultsPage() {
                 <StrengthWeaknessList tone="positive" items={report.strengths} />
               </div>
             </div>
-            <div className="rounded-2xl border border-ink-200 bg-white p-6 shadow-sm">
+            <div className="card-surface card-surface-interactive rounded-2xl border border-ink-200 bg-white p-6">
               <h3 className="text-sm font-bold uppercase tracking-wide text-amber-700">
                 Weaknesses
               </h3>
@@ -208,9 +219,9 @@ export default function ResultsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <SectionHeading
             index={5}
             icon={Target}
@@ -221,9 +232,9 @@ export default function ResultsPage() {
             pointsLeftOnTable={report.missedOpportunities.pointsLeftOnTable}
             items={report.missedOpportunities.items}
           />
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <SectionHeading
             index={6}
             icon={Workflow}
@@ -248,9 +259,9 @@ export default function ResultsPage() {
           ) : (
             <p className="text-sm text-ink-400">All core flows are already live. Nice work.</p>
           )}
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <SectionHeading
             index={7}
             icon={Milestone}
@@ -258,9 +269,9 @@ export default function ResultsPage() {
             subtitle="A simple sequence to work through the priorities above."
           />
           <GrowthPlanTimeline steps={report.growthPlan} />
-        </div>
+        </Reveal>
 
-        <div className="mt-16">
+        <Reveal className="mt-16">
           <SectionHeading
             index={8}
             icon={TrendingUp}
@@ -268,7 +279,7 @@ export default function ResultsPage() {
             subtitle="A directional range based on the gaps identified above."
           />
           <RevenueGrowthPanel revenueGrowth={report.revenueGrowth} />
-        </div>
+        </Reveal>
       </Container>
     </section>
   )

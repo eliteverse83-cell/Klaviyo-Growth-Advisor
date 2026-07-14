@@ -10,7 +10,7 @@ export default function HealthRatingPanel({ maturityLevel }) {
   const style = TIER_STYLES[maturityLevel.label] ?? TIER_STYLES.Developing
 
   return (
-    <div className="flex h-full flex-col justify-center rounded-2xl border border-ink-200 bg-white p-8 shadow-sm">
+    <div className="card-surface flex h-full flex-col justify-center rounded-2xl border border-ink-200 bg-white p-8">
       <span
         className={`inline-flex w-fit items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide ${style.badge}`}
       >

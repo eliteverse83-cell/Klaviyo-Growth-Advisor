@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom'
 
 const VARIANTS = {
   primary:
-    'bg-brand-600 text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 focus-visible:outline-brand-600',
+    'bg-brand-600 text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 hover:shadow-md hover:shadow-brand-600/30 hover:-translate-y-px focus-visible:outline-brand-600',
   secondary:
-    'bg-white text-ink-700 border border-ink-200 hover:border-brand-300 hover:text-brand-700 focus-visible:outline-brand-600',
+    'bg-white text-ink-700 border border-ink-200 hover:border-brand-300 hover:text-brand-700 hover:shadow-sm hover:-translate-y-px focus-visible:outline-brand-600',
   ghost:
     'bg-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900 focus-visible:outline-brand-600',
 }
@@ -29,7 +29,7 @@ export default function Button({
   children,
   ...props
 }) {
-  const classes = `inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${className}`
+  const classes = `inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-all duration-150 ease-out active:scale-[0.97] active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none ${VARIANTS[variant]} ${SIZES[size]} ${className}`
 
   if (to) {
     return (

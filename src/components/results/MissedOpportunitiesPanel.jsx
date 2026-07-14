@@ -2,7 +2,7 @@ import { Target } from 'lucide-react'
 
 export default function MissedOpportunitiesPanel({ pointsLeftOnTable, items }) {
   return (
-    <div className="rounded-2xl border border-ink-200 bg-white p-8 shadow-sm">
+    <div className="card-surface rounded-2xl border border-ink-200 bg-white p-8">
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm font-semibold text-ink-500">Points left on the table</p>
