@@ -155,10 +155,10 @@ export default function AuditForm() {
     }
 
     setIsSubmitting(true)
-    // No audit logic yet — simulate a brief processing state, then hand
-    // off to the Results page (which renders mock data for now).
+    // Brief simulated processing state before handing off to the Results
+    // page, which scores this data via src/utils/scoringEngine.js.
     setTimeout(() => {
-      navigate('/results')
+      navigate('/results', { state: { formData } })
     }, 900)
   }
 
