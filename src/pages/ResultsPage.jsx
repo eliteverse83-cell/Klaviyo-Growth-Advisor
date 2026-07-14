@@ -31,6 +31,7 @@ import RevenueGrowthPanel from '../components/results/RevenueGrowthPanel.jsx'
 import { generateAuditReport } from '../utils/auditReport.js'
 import { SAMPLE_AUDIT_RESPONSE } from '../data/sampleAuditResponse.js'
 import { fetchPersonalizedRecommendations } from '../services/aiRecommendations.js'
+import { downloadAuditPdf } from '../utils/pdfReport.js'
 
 export default function ResultsPage() {
   const location = useLocation()
@@ -68,6 +69,17 @@ export default function ResultsPage() {
 
   const hasAiRecommendations = aiStatus === 'success' && Boolean(aiData?.recommendations?.length)
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
+
+  async function handleExportPdf() {
+    setIsExportingPdf(true)
+    try {
+      await downloadAuditPdf(report, aiStatus === 'success' ? aiData : null)
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }
+
   return (
     <section className="py-16 sm:py-20">
       <Container>
@@ -87,9 +99,13 @@ export default function ResultsPage() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" size="sm">
-              <Download className="h-4 w-4" />
-              Export PDF
+            <Button variant="secondary" size="sm" onClick={handleExportPdf} disabled={isExportingPdf}>
+              {isExportingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isExportingPdf ? 'Generating…' : 'Export PDF'}
             </Button>
             <Button to="/audit" variant="ghost" size="sm">
               <RefreshCw className="h-4 w-4" />
