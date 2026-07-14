@@ -20,13 +20,20 @@ const ConsultantReportSchema = z.object({
         rationale: z
           .string()
           .describe(
-            '2-4 sentences of specific, consultant-grade reasoning grounded in this client\'s actual answers and numbers. No generic filler like "this can help improve revenue."',
+            '2-4 sentences explaining WHY this specifically matters for this client right now — grounded in their actual platform, list size, revenue stage, active/missing flows, or stated challenge. No generic filler like "this can help improve revenue."',
           ),
         priority: z.enum(['High', 'Medium', 'Low']),
         expectedImpact: z
           .string()
           .describe(
-            'A short, concrete phrase describing the expected outcome, framed the way an experienced consultant would state it — e.g. "Typically recovers 3-5% of gross revenue within 60 days."',
+            'A short, concrete phrase describing the expected outcome, framed the way an experienced consultant would state it — e.g. "Typically recovers 3-5% of gross revenue within 60 days." Scale the estimate to this client\'s revenue bracket and list size rather than quoting a generic industry stat.',
+          ),
+        implementationSteps: z
+          .array(z.string())
+          .min(2)
+          .max(4)
+          .describe(
+            'Concrete, sequential steps to actually build this in Klaviyo (or the client\'s stated ESP) — e.g. trigger/segment to use, number and timing of emails, key content or offer for each touch, and any conditional split or exit criteria. Specific enough that someone could start building today, not vague guidance like "set up automation."',
           ),
       }),
     )
@@ -42,7 +49,8 @@ Write like a consultant delivering findings to a client, not like a generic mark
 - Be direct and specific about what's missing and why it matters for THIS business's stage and revenue.
 - If the client described a specific challenge in their own words, address it directly in at least one recommendation.
 - Ground claims in realistic, well-known Klaviyo/email-marketing benchmarks rather than fabricated precise statistics.
-- Prioritize recommendations by real revenue impact for a business of this size, not generic importance.`
+- Prioritize recommendations by real revenue impact for a business of this size, not generic importance.
+- For every recommendation, give three distinct things: (1) why it matters for this specific client, (2) the expected impact, scaled to their revenue/list size, and (3) implementation steps concrete enough to hand to an email marketer and have them start building — name the trigger, segment, email count/timing, and content angle. Do not repeat the same reasoning across multiple recommendations.`
 
 function buildUserPrompt(formData, scoreReport) {
   const { overallScore, maturityLevel, dimensions } = scoreReport

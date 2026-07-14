@@ -11,6 +11,8 @@ import {
   Workflow,
   Milestone,
   TrendingUp,
+  Sparkles,
+  Loader2,
 } from 'lucide-react'
 import Container from '../components/ui/Container.jsx'
 import Button from '../components/ui/Button.jsx'
@@ -20,6 +22,7 @@ import SectionHeading from '../components/results/SectionHeading.jsx'
 import ExecutiveSummaryPanel from '../components/results/ExecutiveSummaryPanel.jsx'
 import BiggestRevenueLeakPanel from '../components/results/BiggestRevenueLeakPanel.jsx'
 import ImmediateWinsList from '../components/results/ImmediateWinsList.jsx'
+import AIRecommendationCard from '../components/results/AIRecommendationCard.jsx'
 import StrengthWeaknessList from '../components/results/StrengthWeaknessList.jsx'
 import MissedOpportunitiesPanel from '../components/results/MissedOpportunitiesPanel.jsx'
 import RecommendationCard from '../components/results/RecommendationCard.jsx'
@@ -63,14 +66,7 @@ export default function ResultsPage() {
     }
   }, [effectiveFormData])
 
-  const immediateWins =
-    aiStatus === 'success' && aiData?.recommendations?.length
-      ? aiData.recommendations.slice(0, 3).map((rec) => ({
-          title: rec.title,
-          description: rec.rationale,
-          priority: rec.priority,
-        }))
-      : report.immediateWins
+  const hasAiRecommendations = aiStatus === 'success' && Boolean(aiData?.recommendations?.length)
 
   return (
     <section className="py-16 sm:py-20">
@@ -143,9 +139,32 @@ export default function ResultsPage() {
             index={3}
             icon={Zap}
             title="Immediate Wins"
-            subtitle="The highest-leverage moves to make first."
+            subtitle="The highest-leverage moves to make first — why each matters, the expected payoff, and how to build it."
           />
-          <ImmediateWinsList wins={immediateWins} />
+
+          {hasAiRecommendations ? (
+            <>
+              <span className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">
+                <Sparkles className="h-3 w-3" />
+                Personalized by AI
+              </span>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                {aiData.recommendations.map((recommendation, index) => (
+                  <AIRecommendationCard key={index} recommendation={recommendation} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {aiStatus === 'loading' && (
+                <span className="mb-5 inline-flex items-center gap-1.5 text-xs font-medium text-ink-400">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Personalizing…
+                </span>
+              )}
+              <ImmediateWinsList wins={report.immediateWins} />
+            </>
+          )}
         </div>
 
         <div className="mt-16">
