@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
   Download,
@@ -20,18 +20,46 @@ import MissedOpportunitiesPanel from '../components/results/MissedOpportunitiesP
 import RecommendationCard from '../components/results/RecommendationCard.jsx'
 import RevenueOpportunityPanel from '../components/results/RevenueOpportunityPanel.jsx'
 import NextStepsTimeline from '../components/results/NextStepsTimeline.jsx'
+import AIConsultantSection from '../components/results/AIConsultantSection.jsx'
 import { generateAuditReport } from '../utils/auditReport.js'
 import { SAMPLE_AUDIT_RESPONSE } from '../data/sampleAuditResponse.js'
+import { fetchPersonalizedRecommendations } from '../services/aiRecommendations.js'
 
 export default function ResultsPage() {
   const location = useLocation()
   const formData = location.state?.formData
   const isSample = !formData
+  const effectiveFormData = formData ?? SAMPLE_AUDIT_RESPONSE
 
   const report = useMemo(
-    () => generateAuditReport(formData ?? SAMPLE_AUDIT_RESPONSE),
-    [formData],
+    () => generateAuditReport(effectiveFormData),
+    [effectiveFormData],
   )
+
+  const [aiStatus, setAiStatus] = useState('loading')
+  const [aiData, setAiData] = useState(null)
+  const [aiError, setAiError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setAiStatus('loading')
+
+    fetchPersonalizedRecommendations(effectiveFormData)
+      .then((data) => {
+        if (cancelled) return
+        setAiData(data)
+        setAiStatus('success')
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setAiError(error.message)
+        setAiStatus('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [effectiveFormData])
 
   return (
     <section className="py-16 sm:py-20">
@@ -76,6 +104,10 @@ export default function ResultsPage() {
             classification={report.classification}
             healthRating={report.healthRating}
           />
+        </div>
+
+        <div className="mt-10">
+          <AIConsultantSection status={aiStatus} data={aiData} error={aiError} />
         </div>
 
         <div className="mt-16">
