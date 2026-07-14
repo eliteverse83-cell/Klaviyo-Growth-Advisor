@@ -1,50 +1,28 @@
 /**
  * Builds the qualitative consulting-report content (strengths, weaknesses,
- * recommendations, revenue estimate, next steps) on top of the raw
- * category scores from scoringEngine.js. Pure functions only.
+ * recommendations, revenue estimate, next steps) on top of the weighted
+ * maturity score from scoringEngine.js. Pure functions only.
+ *
+ * Two layers of detail feed the report: the 8 scored dimensions (used for
+ * Strengths & Weaknesses, matching the maturity model itself), and
+ * individual flows (used for specific, actionable recommendations — a
+ * "Segmentation" dimension gap doesn't tell you what to build, but a
+ * missing "Abandoned Cart" flow does). Flow-level "points at stake" is
+ * computed by re-running the real scorer with that flow hypothetically
+ * added, so it always reflects the model's actual interactions (e.g. a
+ * flow that also unlocks a Lifecycle Coverage stage is worth more) rather
+ * than a hand-maintained shadow calculation.
  */
-import { calculateAuditScore } from './scoringEngine.js'
+import { calculateAuditScore, ALL_FLOWS } from './scoringEngine.js'
 
-// The 6 flow categories double as "flows" for the Recommended Flows
-// section; the other 4 categories are program-level, not a flow to launch.
-const FLOW_CATEGORY_IDS = [
-  'welcomeFlow',
-  'abandonedCart',
-  'browseAbandonment',
-  'vipFlow',
-  'sunsetFlow',
-  'birthdayFlow',
-]
-
-const CATEGORY_COPY = {
-  welcomeFlow: {
-    flowName: 'Welcome',
-    strength: 'Your Welcome Flow is live, capturing new subscribers while their intent is highest.',
-    weakness: 'No Welcome Flow is active — new subscribers currently get nothing after they sign up.',
-    actionTitle: 'Launch a Welcome Flow',
-    rationale:
-      'New subscribers convert far better in their first 48 hours than in any later campaign. This is usually the fastest flow to stand up.',
+const DIMENSION_COPY = {
+  activeFlows: {
+    strength: 'Your core automated flows are live and doing the heavy lifting on recovery and retention revenue.',
+    weakness: 'Several standard automated flows are missing, which typically means recoverable revenue is going unclaimed every month.',
   },
-  abandonedCart: {
-    flowName: 'Abandoned Cart',
-    strength: 'Your Abandoned Cart Flow is recovering revenue from shoppers who didn’t check out.',
-    weakness: 'No Abandoned Cart Flow is active — shoppers who add to cart and leave aren’t being followed up with.',
-    actionTitle: 'Launch an Abandoned Cart Flow',
-    rationale:
-      'Typically the single highest-ROI automated flow. Shoppers who reach checkout are one reminder away from converting.',
-  },
-  browseAbandonment: {
-    flowName: 'Browse Abandonment',
-    strength: 'Your Browse Abandonment Flow is re-engaging visitors who viewed products without buying.',
-    weakness: 'No Browse Abandonment Flow is active — product-page visitors who don’t add to cart are never re-engaged.',
-    actionTitle: 'Launch a Browse Abandonment Flow',
-    rationale: 'Catch interested shoppers before they forget your brand and buy from a competitor instead.',
-  },
-  sms: {
-    strength: 'SMS is enabled, giving you a high-open-rate channel alongside email.',
-    weakness: 'SMS marketing isn’t enabled yet — you’re relying on email alone for time-sensitive messages.',
-    actionTitle: 'Enable SMS Marketing',
-    rationale: 'SMS routinely sees open rates above 95% and is well suited to cart recovery and flash-sale alerts.',
+  lifecycleCoverage: {
+    strength: 'Your flows span the full customer lifecycle, from first purchase through win-back.',
+    weakness: 'Coverage across the customer lifecycle has real gaps — some stages of the journey have no automated touchpoint at all.',
   },
   segmentation: {
     strength: 'Your list is meaningfully segmented, which supports more relevant, higher-converting sends.',
@@ -52,67 +30,75 @@ const CATEGORY_COPY = {
     actionTitle: 'Build Out Customer Segments',
     rationale: 'Segmented campaigns consistently outperform batch-and-blast sends by matching message to customer intent.',
   },
-  campaignFrequency: {
+  campaignConsistency: {
     strength: 'Your campaign cadence is healthy and consistent.',
     weakness: 'Campaign frequency is low, which limits how often you stay in front of your list.',
-    actionTitle: 'Increase Campaign Cadence',
-    rationale:
-      'Stores sending fewer than 4 campaigns a month typically leave revenue on the table with no deliverability upside.',
+    actionTitle: 'Increase Campaign Consistency',
+    rationale: 'Stores sending fewer than 4 campaigns a month typically leave revenue on the table with no deliverability upside.',
   },
-  vipFlow: {
-    flowName: 'VIP',
-    strength: 'A VIP Flow is rewarding your best customers and encouraging repeat purchases.',
-    weakness: 'No VIP Flow is active — your highest-value customers aren’t being recognized or rewarded.',
-    actionTitle: 'Launch a VIP Flow',
-    rationale: 'Retaining a top customer is far cheaper than acquiring a new one — this flow protects your most valuable relationships.',
+  smsUsage: {
+    strength: 'SMS is enabled, giving you a high-open-rate channel alongside email.',
+    weakness: 'SMS marketing isn’t enabled yet — you’re relying on email alone for time-sensitive messages.',
+    actionTitle: 'Enable SMS Marketing',
+    rationale: 'SMS routinely sees open rates above 95% and is well suited to cart recovery and flash-sale alerts.',
   },
-  sunsetFlow: {
-    flowName: 'Sunset',
-    strength: 'A Sunset Flow is keeping your list clean and protecting deliverability.',
-    weakness: 'No Sunset Flow is active — disengaged subscribers are likely still receiving full sends.',
+  deliverability: {
+    strength: 'Your sending practices — list hygiene, targeted sends, and cadence — support strong inbox placement.',
+    weakness: 'Deliverability best practices have gaps — likely some mix of no list hygiene flow, unsegmented sends, or inconsistent cadence.',
+  },
+  listSize: {
+    strength: 'Your email list is well-sized relative to your order volume, reflecting effective list capture.',
+    weakness: 'Your email list is small relative to your order volume, suggesting on-site capture isn’t keeping pace with sales.',
+    actionTitle: 'Grow Your Email List',
+    rationale: 'A list that lags behind order volume caps how much revenue any flow or campaign can ever reach, regardless of how well it converts.',
+  },
+  revenueStage: {
+    strength: 'Your revenue scale supports continued investment in program sophistication.',
+    weakness: 'At your current revenue stage, there’s more room to invest in program sophistication as you grow.',
+  },
+}
+
+// Dimensions with a concrete, standalone action (shown as recommendations).
+// activeFlows/lifecycleCoverage are represented by specific flow
+// recommendations instead; deliverability/revenueStage are descriptive
+// signals derived from other actions rather than tasks in their own right.
+const ACTIONABLE_DIMENSION_IDS = ['segmentation', 'campaignConsistency', 'smsUsage', 'listSize']
+
+const FLOW_COPY = {
+  Welcome: {
+    actionTitle: 'Launch a Welcome Flow',
+    rationale: 'New subscribers convert far better in their first 48 hours than in any later campaign. This is usually the fastest flow to stand up.',
+  },
+  'Abandoned Cart': {
+    actionTitle: 'Launch an Abandoned Cart Flow',
+    rationale: 'Typically the single highest-ROI automated flow. Shoppers who reach checkout are one reminder away from converting.',
+  },
+  'Browse Abandonment': {
+    actionTitle: 'Launch a Browse Abandonment Flow',
+    rationale: 'Catch interested shoppers before they forget your brand and buy from a competitor instead.',
+  },
+  'Post Purchase': {
+    actionTitle: 'Launch a Post-Purchase Flow',
+    rationale: 'Turns a single sale into a relationship — this is where repeat purchase rate and reviews are won or lost.',
+  },
+  'Win Back': {
+    actionTitle: 'Launch a Win-Back Flow',
+    rationale: 'Re-engaging a lapsed customer is consistently cheaper than acquiring a new one.',
+  },
+  Sunset: {
     actionTitle: 'Launch a Sunset Flow',
-    rationale: 'Removing chronically disengaged subscribers protects inbox placement for customers who do open your emails.',
+    rationale: 'Removing chronically disengaged subscribers protects inbox placement for the customers who do open your emails.',
   },
-  birthdayFlow: {
-    flowName: 'Birthday',
-    strength: 'A Birthday Flow is adding a personal touchpoint that drives incremental purchases.',
-    weakness: 'No Birthday Flow is active — an easy, high-affinity touchpoint is currently unused.',
+  Birthday: {
     actionTitle: 'Launch a Birthday Flow',
     rationale: 'Low effort to set up and consistently well received — a reliable source of incremental revenue.',
   },
-  revenueMaturity: {
-    strength: 'Your program’s sophistication is keeping pace with your revenue scale.',
-    weakness: 'Your program’s sophistication has room to grow to match your revenue scale.',
-    actionTitle: 'Mature Your Program to Match Your Scale',
-    rationale: 'As revenue grows, flows and segmentation typically need to grow with it to keep converting at the same rate.',
+  VIP: {
+    actionTitle: 'Launch a VIP Flow',
+    rationale: 'Retaining a top customer is far cheaper than acquiring a new one — this flow protects your most valuable relationships.',
   },
 }
 
-const HEALTH_RATING_COPY = {
-  Excellent: {
-    tagline: 'Your Klaviyo program is firing on all cylinders.',
-    summary:
-      'Core flows, segmentation, and cadence are all in strong shape. Focus now shifts to refinement and testing rather than foundational gaps.',
-  },
-  Strong: {
-    tagline: 'A solid foundation with a few clear gaps left to close.',
-    summary:
-      'Most of the fundamentals are in place. Closing the remaining gaps below should unlock incremental revenue without a major overhaul.',
-  },
-  'Needs Improvement': {
-    tagline: 'The basics are partially in place, but meaningful revenue is being left on the table.',
-    summary:
-      'Several high-impact flows or program elements are missing. Prioritizing the gaps below should produce a noticeable lift.',
-  },
-  'Critical Opportunities': {
-    tagline: 'Your email and SMS program has significant untapped potential.',
-    summary:
-      'Foundational flows and program elements are largely missing. The good news: even a few quick wins here should move the needle fast.',
-  },
-}
-
-// Representative monthly revenue used to translate a bracket into a
-// dollar estimate. Deliberately conservative (low end of each bracket).
 const REVENUE_BRACKET_MONTHLY_ESTIMATE = {
   'Under $10k': 7000,
   '$10k – $50k': 28000,
@@ -121,88 +107,116 @@ const REVENUE_BRACKET_MONTHLY_ESTIMATE = {
   '$1M+': 1500000,
 }
 
-function gap(category) {
-  return category.maxPoints - category.points
+function gap(dimension) {
+  return dimension.maxPoints - dimension.points
 }
 
 function priorityFromGap(pointsAtStake) {
-  if (pointsAtStake >= 15) return 'High'
-  if (pointsAtStake >= 10) return 'Medium'
+  if (pointsAtStake >= 8) return 'High'
+  if (pointsAtStake >= 4) return 'Medium'
   return 'Low'
 }
 
-export function getStrengths(categories) {
-  return categories
-    .filter((category) => category.maxPoints > 0 && category.points === category.maxPoints)
-    .map((category) => ({
-      id: category.id,
-      title: category.label,
-      description: CATEGORY_COPY[category.id]?.strength ?? '',
+/**
+ * Which flows are missing, and the real marginal score value of adding
+ * each one on its own (accounting for Active Flows + Lifecycle Coverage +
+ * Deliverability interactions, since e.g. Sunset scores 0 directly under
+ * Active Flows but still moves the needle elsewhere).
+ */
+function getMissingFlowOpportunities(formData) {
+  const activeFlows = Array.isArray(formData?.activeFlows) ? formData.activeFlows : []
+  const baseScore = calculateAuditScore(formData).overallScore
+
+  return ALL_FLOWS.filter((flow) => !activeFlows.includes(flow)).map((flow) => {
+    const withFlow = { ...formData, activeFlows: [...activeFlows, flow] }
+    const pointsAtStake = calculateAuditScore(withFlow).overallScore - baseScore
+    return { flowName: flow, pointsAtStake }
+  })
+}
+
+export function getStrengths(dimensions) {
+  return dimensions
+    .filter((dimension) => dimension.maxPoints > 0 && dimension.points === dimension.maxPoints)
+    .map((dimension) => ({
+      id: dimension.id,
+      title: dimension.label,
+      description: DIMENSION_COPY[dimension.id]?.strength ?? '',
     }))
 }
 
-export function getWeaknesses(categories) {
-  return categories
-    .filter((category) => gap(category) > 0)
+export function getWeaknesses(dimensions) {
+  return dimensions
+    .filter((dimension) => gap(dimension) > 0)
     .sort((a, b) => gap(b) - gap(a))
-    .map((category) => ({
-      id: category.id,
-      title: category.label,
-      description: CATEGORY_COPY[category.id]?.weakness ?? '',
-      pointsAtStake: gap(category),
+    .map((dimension) => ({
+      id: dimension.id,
+      title: dimension.label,
+      description: DIMENSION_COPY[dimension.id]?.weakness ?? '',
+      pointsAtStake: gap(dimension),
     }))
 }
 
-export function getMissedOpportunities(categories) {
-  const gaps = categories.filter((category) => gap(category) > 0)
-  const pointsLeftOnTable = gaps.reduce((total, category) => total + gap(category), 0)
-
-  const items = gaps
-    .sort((a, b) => gap(b) - gap(a))
-    .map((category) => ({
-      id: category.id,
-      title: CATEGORY_COPY[category.id]?.actionTitle ?? category.label,
-      pointsAtStake: gap(category),
+export function getMissedOpportunities(formData, dimensions, overallScore) {
+  const flowItems = getMissingFlowOpportunities(formData)
+    .filter((flow) => flow.pointsAtStake > 0)
+    .map((flow) => ({
+      id: `flow-${flow.flowName}`,
+      title: FLOW_COPY[flow.flowName]?.actionTitle ?? `Launch a ${flow.flowName} Flow`,
+      pointsAtStake: flow.pointsAtStake,
     }))
 
-  return { pointsLeftOnTable, items }
+  const dimensionItems = dimensions
+    .filter((dimension) => ACTIONABLE_DIMENSION_IDS.includes(dimension.id) && gap(dimension) > 0)
+    .map((dimension) => ({
+      id: dimension.id,
+      title: DIMENSION_COPY[dimension.id]?.actionTitle ?? dimension.label,
+      pointsAtStake: gap(dimension),
+    }))
+
+  const items = [...flowItems, ...dimensionItems].sort((a, b) => b.pointsAtStake - a.pointsAtStake)
+
+  return { pointsLeftOnTable: 100 - overallScore, items }
 }
 
-export function getRecommendedFlows(categories) {
-  return categories
-    .filter((category) => FLOW_CATEGORY_IDS.includes(category.id) && gap(category) > 0)
-    .sort((a, b) => gap(b) - gap(a))
-    .map((category) => {
-      const copy = CATEGORY_COPY[category.id]
-      const pointsAtStake = gap(category)
-      return {
-        id: category.id,
-        flowName: copy.flowName,
-        title: copy.actionTitle,
-        description: copy.rationale,
-        pointsAtStake,
-        priority: priorityFromGap(pointsAtStake),
-      }
-    })
+export function getRecommendedFlows(formData) {
+  return getMissingFlowOpportunities(formData)
+    .filter((flow) => flow.pointsAtStake > 0)
+    .sort((a, b) => b.pointsAtStake - a.pointsAtStake)
+    .map((flow) => ({
+      id: flow.flowName,
+      flowName: flow.flowName,
+      title: FLOW_COPY[flow.flowName]?.actionTitle ?? `Launch a ${flow.flowName} Flow`,
+      description: FLOW_COPY[flow.flowName]?.rationale ?? '',
+      pointsAtStake: flow.pointsAtStake,
+      priority: priorityFromGap(flow.pointsAtStake),
+    }))
 }
 
-export function getPriorityTasks(categories, limit = 5) {
-  return categories
-    .filter((category) => gap(category) > 0)
-    .sort((a, b) => gap(b) - gap(a))
+export function getPriorityTasks(formData, dimensions, limit = 5) {
+  const flowItems = getMissingFlowOpportunities(formData)
+    .filter((flow) => flow.pointsAtStake > 0)
+    .map((flow) => ({
+      id: `flow-${flow.flowName}`,
+      title: FLOW_COPY[flow.flowName]?.actionTitle ?? `Launch a ${flow.flowName} Flow`,
+      description: FLOW_COPY[flow.flowName]?.rationale ?? '',
+      category: 'Active Flows',
+      pointsAtStake: flow.pointsAtStake,
+    }))
+
+  const dimensionItems = dimensions
+    .filter((dimension) => ACTIONABLE_DIMENSION_IDS.includes(dimension.id) && gap(dimension) > 0)
+    .map((dimension) => ({
+      id: dimension.id,
+      title: DIMENSION_COPY[dimension.id]?.actionTitle ?? dimension.label,
+      description: DIMENSION_COPY[dimension.id]?.rationale ?? '',
+      category: dimension.label,
+      pointsAtStake: gap(dimension),
+    }))
+
+  return [...flowItems, ...dimensionItems]
+    .sort((a, b) => b.pointsAtStake - a.pointsAtStake)
     .slice(0, limit)
-    .map((category) => {
-      const copy = CATEGORY_COPY[category.id]
-      const pointsAtStake = gap(category)
-      return {
-        id: category.id,
-        title: copy?.actionTitle ?? category.label,
-        description: copy?.rationale ?? '',
-        category: category.label,
-        pointsAtStake,
-        priority: priorityFromGap(pointsAtStake),
-      }
-    })
+    .map((item) => ({ ...item, priority: priorityFromGap(item.pointsAtStake) }))
 }
 
 export function estimateRevenueOpportunity(formData, overallScore) {
@@ -239,19 +253,18 @@ export function getNextSteps(priorityTasks) {
  * @param {object} formData
  */
 export function generateAuditReport(formData) {
-  const { overallScore, classification, categories } = calculateAuditScore(formData)
-  const priorityTasks = getPriorityTasks(categories)
+  const { overallScore, maturityLevel, dimensions } = calculateAuditScore(formData)
+  const priorityTasks = getPriorityTasks(formData, dimensions)
 
   return {
     businessName: formData?.businessName?.trim() || 'Your Store',
     overallScore,
-    classification,
-    healthRating: HEALTH_RATING_COPY[classification],
-    categories,
-    strengths: getStrengths(categories),
-    weaknesses: getWeaknesses(categories),
-    missedOpportunities: getMissedOpportunities(categories),
-    recommendedFlows: getRecommendedFlows(categories),
+    maturityLevel,
+    dimensions,
+    strengths: getStrengths(dimensions),
+    weaknesses: getWeaknesses(dimensions),
+    missedOpportunities: getMissedOpportunities(formData, dimensions, overallScore),
+    recommendedFlows: getRecommendedFlows(formData),
     priorityTasks,
     revenueOpportunity: estimateRevenueOpportunity(formData, overallScore),
     nextSteps: getNextSteps(priorityTasks),

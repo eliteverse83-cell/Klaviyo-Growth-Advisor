@@ -100,10 +100,7 @@ export default function ResultsPage() {
 
         <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_2fr]">
           <ScoreCard label="Overall Score" score={report.overallScore} size="lg" />
-          <HealthRatingPanel
-            classification={report.classification}
-            healthRating={report.healthRating}
-          />
+          <HealthRatingPanel maturityLevel={report.maturityLevel} />
         </div>
 
         <div className="mt-10">

@@ -45,11 +45,11 @@ Write like a consultant delivering findings to a client, not like a generic mark
 - Prioritize recommendations by real revenue impact for a business of this size, not generic importance.`
 
 function buildUserPrompt(formData, scoreReport) {
-  const { overallScore, classification, categories } = scoreReport
+  const { overallScore, maturityLevel, dimensions } = scoreReport
   const activeFlows = Array.isArray(formData.activeFlows) ? formData.activeFlows : []
 
-  const categoryLines = categories
-    .map((category) => `- ${category.label}: ${category.points}/${category.maxPoints} points`)
+  const dimensionLines = dimensions
+    .map((dimension) => `- ${dimension.label}: ${dimension.points}/${dimension.maxPoints} points`)
     .join('\n')
 
   return `Client intake:
@@ -68,9 +68,9 @@ function buildUserPrompt(formData, scoreReport) {
 - Primary business goal: ${formData.primaryGoal || 'Not provided'}
 - Biggest challenge, in their own words: ${formData.biggestChallenge || 'Not provided'}
 
-Computed audit score: ${overallScore}/100 (${classification})
-Category breakdown:
-${categoryLines}
+Computed audit score: ${overallScore}/100 — Maturity Level ${maturityLevel.level} of 5 (${maturityLevel.label})
+Dimension breakdown:
+${dimensionLines}
 
 Write your consultant report now.`
 }
