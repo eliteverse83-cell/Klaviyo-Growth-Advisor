@@ -67,7 +67,7 @@ function Field({ field, value, onChange }) {
 
     case 'checkbox-group':
       return (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-4">
           {field.options.map((option) => {
             const checked = value.includes(option)
             return (
@@ -90,7 +90,7 @@ function Field({ field, value, onChange }) {
                   }}
                   className="h-4 w-4 shrink-0 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
                 />
-                <span className="truncate">{option}</span>
+                <span>{option}</span>
               </label>
             )
           })}
@@ -126,9 +126,9 @@ function Field({ field, value, onChange }) {
 }
 
 /**
- * Multi-step manual audit intake form. Collects and holds state locally —
- * it does not score or analyze anything. Submitting routes to the Results
- * page, which renders mock data until real audit logic is built.
+ * Multi-step manual audit intake form. Collects state locally and, on
+ * submit, hands the raw answers to the Results page, which scores them via
+ * src/utils/scoringEngine.js and requests AI recommendations.
  */
 export default function AuditForm() {
   const navigate = useNavigate()
