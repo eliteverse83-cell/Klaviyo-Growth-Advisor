@@ -1,6 +1,6 @@
 import { CheckCircle2 } from 'lucide-react'
 
-export default function NextStepsTimeline({ steps }) {
+export default function GrowthPlanTimeline({ steps }) {
   if (steps.length === 0) {
     return (
       <div className="rounded-2xl border border-ink-200 bg-white p-8 text-center shadow-sm">
@@ -13,7 +13,7 @@ export default function NextStepsTimeline({ steps }) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {steps.map((step, index) => (
         <div key={step.phase} className="rounded-2xl border border-ink-200 bg-white p-6 shadow-sm">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">

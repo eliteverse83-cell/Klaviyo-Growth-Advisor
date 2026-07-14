@@ -1,17 +1,21 @@
 /**
- * Builds the qualitative consulting-report content (strengths, weaknesses,
- * recommendations, revenue estimate, next steps) on top of the weighted
+ * Builds the qualitative consulting-report content — executive summary,
+ * biggest revenue leak, immediate wins, strengths/weaknesses, a 90-day
+ * growth plan, and a revenue growth projection — on top of the weighted
  * maturity score from scoringEngine.js. Pure functions only.
  *
  * Two layers of detail feed the report: the 8 scored dimensions (used for
  * Strengths & Weaknesses, matching the maturity model itself), and
  * individual flows (used for specific, actionable recommendations — a
  * "Segmentation" dimension gap doesn't tell you what to build, but a
- * missing "Abandoned Cart" flow does). Flow-level "points at stake" is
- * computed by re-running the real scorer with that flow hypothetically
- * added, so it always reflects the model's actual interactions (e.g. a
- * flow that also unlocks a Lifecycle Coverage stage is worth more) rather
- * than a hand-maintained shadow calculation.
+ * missing "Abandoned Cart" flow does). Both layers are merged into one
+ * ranked gap list (getRankedGaps) that every recommendation-style section
+ * pulls from, so "biggest," "immediate," and "90-day" all agree on what
+ * matters most. Flow-level "points at stake" is computed by re-running
+ * the real scorer with that flow hypothetically added, so it always
+ * reflects the model's actual interactions (e.g. a flow that also unlocks
+ * a Lifecycle Coverage stage is worth more) rather than a hand-maintained
+ * shadow calculation.
  */
 import { calculateAuditScore, ALL_FLOWS } from './scoringEngine.js'
 
@@ -27,18 +31,21 @@ const DIMENSION_COPY = {
   segmentation: {
     strength: 'Your list is meaningfully segmented, which supports more relevant, higher-converting sends.',
     weakness: 'Segmentation is minimal — most sends are likely going to your full list regardless of behavior.',
+    leakLabel: 'Minimal Customer Segmentation',
     actionTitle: 'Build Out Customer Segments',
     rationale: 'Segmented campaigns consistently outperform batch-and-blast sends by matching message to customer intent.',
   },
   campaignConsistency: {
     strength: 'Your campaign cadence is healthy and consistent.',
     weakness: 'Campaign frequency is low, which limits how often you stay in front of your list.',
+    leakLabel: 'Inconsistent Campaign Cadence',
     actionTitle: 'Increase Campaign Consistency',
     rationale: 'Stores sending fewer than 4 campaigns a month typically leave revenue on the table with no deliverability upside.',
   },
   smsUsage: {
     strength: 'SMS is enabled, giving you a high-open-rate channel alongside email.',
     weakness: 'SMS marketing isn’t enabled yet — you’re relying on email alone for time-sensitive messages.',
+    leakLabel: 'SMS Marketing Not Enabled',
     actionTitle: 'Enable SMS Marketing',
     rationale: 'SMS routinely sees open rates above 95% and is well suited to cart recovery and flash-sale alerts.',
   },
@@ -49,6 +56,7 @@ const DIMENSION_COPY = {
   listSize: {
     strength: 'Your email list is well-sized relative to your order volume, reflecting effective list capture.',
     weakness: 'Your email list is small relative to your order volume, suggesting on-site capture isn’t keeping pace with sales.',
+    leakLabel: 'Email List Undersized for Order Volume',
     actionTitle: 'Grow Your Email List',
     rationale: 'A list that lags behind order volume caps how much revenue any flow or campaign can ever reach, regardless of how well it converts.',
   },
@@ -134,6 +142,39 @@ function getMissingFlowOpportunities(formData) {
   })
 }
 
+/**
+ * The single ranked list every recommendation section draws from: missing
+ * flows plus actionable dimension gaps, sorted by real revenue impact
+ * (highest first). `leakLabel` is a problem-framed phrase ("No Sunset
+ * Flow") for the Biggest Revenue Leak headline; `title` is the
+ * action-framed phrase ("Launch a Sunset Flow") used everywhere else.
+ */
+function getRankedGaps(formData, dimensions) {
+  const flowItems = getMissingFlowOpportunities(formData)
+    .filter((flow) => flow.pointsAtStake > 0)
+    .map((flow) => ({
+      id: `flow-${flow.flowName}`,
+      leakLabel: `No ${flow.flowName} Flow`,
+      title: FLOW_COPY[flow.flowName]?.actionTitle ?? `Launch a ${flow.flowName} Flow`,
+      description: FLOW_COPY[flow.flowName]?.rationale ?? '',
+      category: 'Active Flows',
+      pointsAtStake: flow.pointsAtStake,
+    }))
+
+  const dimensionItems = dimensions
+    .filter((dimension) => ACTIONABLE_DIMENSION_IDS.includes(dimension.id) && gap(dimension) > 0)
+    .map((dimension) => ({
+      id: dimension.id,
+      leakLabel: DIMENSION_COPY[dimension.id]?.leakLabel ?? dimension.label,
+      title: DIMENSION_COPY[dimension.id]?.actionTitle ?? dimension.label,
+      description: DIMENSION_COPY[dimension.id]?.rationale ?? '',
+      category: dimension.label,
+      pointsAtStake: gap(dimension),
+    }))
+
+  return [...flowItems, ...dimensionItems].sort((a, b) => b.pointsAtStake - a.pointsAtStake)
+}
+
 export function getStrengths(dimensions) {
   return dimensions
     .filter((dimension) => dimension.maxPoints > 0 && dimension.points === dimension.maxPoints)
@@ -157,23 +198,11 @@ export function getWeaknesses(dimensions) {
 }
 
 export function getMissedOpportunities(formData, dimensions, overallScore) {
-  const flowItems = getMissingFlowOpportunities(formData)
-    .filter((flow) => flow.pointsAtStake > 0)
-    .map((flow) => ({
-      id: `flow-${flow.flowName}`,
-      title: FLOW_COPY[flow.flowName]?.actionTitle ?? `Launch a ${flow.flowName} Flow`,
-      pointsAtStake: flow.pointsAtStake,
-    }))
-
-  const dimensionItems = dimensions
-    .filter((dimension) => ACTIONABLE_DIMENSION_IDS.includes(dimension.id) && gap(dimension) > 0)
-    .map((dimension) => ({
-      id: dimension.id,
-      title: DIMENSION_COPY[dimension.id]?.actionTitle ?? dimension.label,
-      pointsAtStake: gap(dimension),
-    }))
-
-  const items = [...flowItems, ...dimensionItems].sort((a, b) => b.pointsAtStake - a.pointsAtStake)
+  const items = getRankedGaps(formData, dimensions).map(({ id, title, pointsAtStake }) => ({
+    id,
+    title,
+    pointsAtStake,
+  }))
 
   return { pointsLeftOnTable: 100 - overallScore, items }
 }
@@ -192,45 +221,67 @@ export function getRecommendedFlows(formData) {
     }))
 }
 
-export function getPriorityTasks(formData, dimensions, limit = 5) {
-  const flowItems = getMissingFlowOpportunities(formData)
-    .filter((flow) => flow.pointsAtStake > 0)
-    .map((flow) => ({
-      id: `flow-${flow.flowName}`,
-      title: FLOW_COPY[flow.flowName]?.actionTitle ?? `Launch a ${flow.flowName} Flow`,
-      description: FLOW_COPY[flow.flowName]?.rationale ?? '',
-      category: 'Active Flows',
-      pointsAtStake: flow.pointsAtStake,
-    }))
-
-  const dimensionItems = dimensions
-    .filter((dimension) => ACTIONABLE_DIMENSION_IDS.includes(dimension.id) && gap(dimension) > 0)
-    .map((dimension) => ({
-      id: dimension.id,
-      title: DIMENSION_COPY[dimension.id]?.actionTitle ?? dimension.label,
-      description: DIMENSION_COPY[dimension.id]?.rationale ?? '',
-      category: dimension.label,
-      pointsAtStake: gap(dimension),
-    }))
-
-  return [...flowItems, ...dimensionItems]
-    .sort((a, b) => b.pointsAtStake - a.pointsAtStake)
+/** Top-ranked, immediately actionable items — the report's "quick wins" list. */
+export function getImmediateWins(formData, dimensions, limit = 3) {
+  return getRankedGaps(formData, dimensions)
     .slice(0, limit)
-    .map((item) => ({ ...item, priority: priorityFromGap(item.pointsAtStake) }))
+    .map(({ id, title, description, category, pointsAtStake }) => ({
+      id,
+      title,
+      description,
+      category,
+      pointsAtStake,
+      priority: priorityFromGap(pointsAtStake),
+    }))
 }
 
-export function estimateRevenueOpportunity(formData, overallScore) {
-  const baseMonthlyRevenue = REVENUE_BRACKET_MONTHLY_ESTIMATE[formData?.monthlyRevenue]
-  if (!baseMonthlyRevenue) return null
+function estimateItemMonthlyImpact(pointsAtStake, totalGapPoints, revenueGrowth) {
+  if (!revenueGrowth || totalGapPoints <= 0) return null
+  const midpointMonthly = (revenueGrowth.monthlyLow + revenueGrowth.monthlyHigh) / 2
+  return Math.round(midpointMonthly * (pointsAtStake / totalGapPoints))
+}
+
+/**
+ * The single highest-impact gap, framed as a "leak" with a dollar estimate
+ * scaled from its share of the total point gap. Not necessarily additive
+ * with other items' estimates (see estimateRevenueGrowth) — this is a
+ * directional "if you fixed just this one thing" figure.
+ */
+export function getBiggestRevenueLeak(formData, dimensions, overallScore, revenueGrowth) {
+  const ranked = getRankedGaps(formData, dimensions)
+  if (ranked.length === 0) return null
+
+  const top = ranked[0]
+  const totalGapPoints = 100 - overallScore
+
+  return {
+    title: top.leakLabel,
+    description: top.description,
+    pointsAtStake: top.pointsAtStake,
+    estimatedMonthlyImpact: estimateItemMonthlyImpact(top.pointsAtStake, totalGapPoints, revenueGrowth),
+  }
+}
+
+/**
+ * Current estimated monthly revenue (from the selected bracket), the
+ * potential monthly revenue if every identified gap were closed, and the
+ * difference between them — the report's headline growth projection.
+ */
+export function estimateRevenueGrowth(formData, overallScore) {
+  const current = REVENUE_BRACKET_MONTHLY_ESTIMATE[formData?.monthlyRevenue]
+  if (!current) return null
 
   const gapRatio = (100 - overallScore) / 100
   const lowPercent = 0.03 + gapRatio * 0.07 // 3%–10% of monthly revenue
   const highPercent = 0.06 + gapRatio * 0.14 // 6%–20% of monthly revenue
 
-  const monthlyLow = Math.round(baseMonthlyRevenue * lowPercent)
-  const monthlyHigh = Math.round(baseMonthlyRevenue * highPercent)
+  const monthlyLow = Math.round(current * lowPercent)
+  const monthlyHigh = Math.round(current * highPercent)
 
   return {
+    current,
+    potential: current + monthlyHigh,
+    difference: monthlyHigh,
     monthlyLow,
     monthlyHigh,
     annualLow: monthlyLow * 12,
@@ -238,14 +289,40 @@ export function estimateRevenueOpportunity(formData, overallScore) {
   }
 }
 
-const NEXT_STEP_PHASES = ['This Week', 'This Month', 'This Quarter']
+const GROWTH_PLAN_PHASES = ['Week 1', 'Week 2', 'Month 2', 'Month 3']
 
-export function getNextSteps(priorityTasks) {
-  return priorityTasks.slice(0, 3).map((task, index) => ({
-    phase: NEXT_STEP_PHASES[index] ?? 'This Quarter',
-    title: task.title,
-    description: task.description,
-  }))
+/** Sequences the top-ranked gaps into a 90-day plan. */
+export function get90DayGrowthPlan(formData, dimensions) {
+  return getRankedGaps(formData, dimensions)
+    .slice(0, GROWTH_PLAN_PHASES.length)
+    .map((item, index) => ({
+      phase: GROWTH_PLAN_PHASES[index],
+      title: item.title,
+      description: item.description,
+    }))
+}
+
+function getExecutiveSummary(formData, { strengths, weaknesses, maturityLevel, overallScore }) {
+  const name = formData?.businessName?.trim() || 'This store'
+  const topStrength = strengths[0]
+  const topWeakness = weaknesses[0]
+  const gapCount = weaknesses.length
+
+  let opening
+  if (topStrength && topWeakness) {
+    opening = `${name} has a strong foundation in ${topStrength.title}, but is missing key opportunities in ${topWeakness.title}.`
+  } else if (topWeakness) {
+    opening = `${name} is missing key opportunities in ${topWeakness.title}, with room to grow across most of the program.`
+  } else {
+    opening = `${name}’s program is executing at a best-in-class level across every dimension measured.`
+  }
+
+  const closingClause =
+    gapCount > 0
+      ? `there ${gapCount === 1 ? 'is' : 'are'} ${gapCount} area${gapCount === 1 ? '' : 's'} worth prioritizing to unlock meaningful revenue`
+      : 'the focus now is on testing and incremental optimization'
+
+  return `${opening} At a maturity score of ${overallScore}/100 (${maturityLevel.label}), ${closingClause}.`
 }
 
 /**
@@ -254,19 +331,23 @@ export function getNextSteps(priorityTasks) {
  */
 export function generateAuditReport(formData) {
   const { overallScore, maturityLevel, dimensions } = calculateAuditScore(formData)
-  const priorityTasks = getPriorityTasks(formData, dimensions)
+  const strengths = getStrengths(dimensions)
+  const weaknesses = getWeaknesses(dimensions)
+  const revenueGrowth = estimateRevenueGrowth(formData, overallScore)
 
   return {
     businessName: formData?.businessName?.trim() || 'Your Store',
     overallScore,
     maturityLevel,
     dimensions,
-    strengths: getStrengths(dimensions),
-    weaknesses: getWeaknesses(dimensions),
+    executiveSummary: getExecutiveSummary(formData, { strengths, weaknesses, maturityLevel, overallScore }),
+    biggestRevenueLeak: getBiggestRevenueLeak(formData, dimensions, overallScore, revenueGrowth),
+    immediateWins: getImmediateWins(formData, dimensions),
+    strengths,
+    weaknesses,
     missedOpportunities: getMissedOpportunities(formData, dimensions, overallScore),
     recommendedFlows: getRecommendedFlows(formData),
-    priorityTasks,
-    revenueOpportunity: estimateRevenueOpportunity(formData, overallScore),
-    nextSteps: getNextSteps(priorityTasks),
+    growthPlan: get90DayGrowthPlan(formData, dimensions),
+    revenueGrowth,
   }
 }

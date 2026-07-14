@@ -3,24 +3,28 @@ import { useLocation } from 'react-router-dom'
 import {
   Download,
   RefreshCw,
+  FileText,
+  AlertOctagon,
+  Zap,
   Scale,
   Target,
   Workflow,
-  ListChecks,
-  TrendingUp,
   Milestone,
+  TrendingUp,
 } from 'lucide-react'
 import Container from '../components/ui/Container.jsx'
 import Button from '../components/ui/Button.jsx'
 import ScoreCard from '../components/results/ScoreCard.jsx'
 import HealthRatingPanel from '../components/results/HealthRatingPanel.jsx'
 import SectionHeading from '../components/results/SectionHeading.jsx'
+import ExecutiveSummaryPanel from '../components/results/ExecutiveSummaryPanel.jsx'
+import BiggestRevenueLeakPanel from '../components/results/BiggestRevenueLeakPanel.jsx'
+import ImmediateWinsList from '../components/results/ImmediateWinsList.jsx'
 import StrengthWeaknessList from '../components/results/StrengthWeaknessList.jsx'
 import MissedOpportunitiesPanel from '../components/results/MissedOpportunitiesPanel.jsx'
 import RecommendationCard from '../components/results/RecommendationCard.jsx'
-import RevenueOpportunityPanel from '../components/results/RevenueOpportunityPanel.jsx'
-import NextStepsTimeline from '../components/results/NextStepsTimeline.jsx'
-import AIConsultantSection from '../components/results/AIConsultantSection.jsx'
+import GrowthPlanTimeline from '../components/results/GrowthPlanTimeline.jsx'
+import RevenueGrowthPanel from '../components/results/RevenueGrowthPanel.jsx'
 import { generateAuditReport } from '../utils/auditReport.js'
 import { SAMPLE_AUDIT_RESPONSE } from '../data/sampleAuditResponse.js'
 import { fetchPersonalizedRecommendations } from '../services/aiRecommendations.js'
@@ -38,7 +42,6 @@ export default function ResultsPage() {
 
   const [aiStatus, setAiStatus] = useState('loading')
   const [aiData, setAiData] = useState(null)
-  const [aiError, setAiError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -50,9 +53,8 @@ export default function ResultsPage() {
         setAiData(data)
         setAiStatus('success')
       })
-      .catch((error) => {
+      .catch(() => {
         if (cancelled) return
-        setAiError(error.message)
         setAiStatus('error')
       })
 
@@ -60,6 +62,15 @@ export default function ResultsPage() {
       cancelled = true
     }
   }, [effectiveFormData])
+
+  const immediateWins =
+    aiStatus === 'success' && aiData?.recommendations?.length
+      ? aiData.recommendations.slice(0, 3).map((rec) => ({
+          title: rec.title,
+          description: rec.rationale,
+          priority: rec.priority,
+        }))
+      : report.immediateWins
 
   return (
     <section className="py-16 sm:py-20">
@@ -103,13 +114,43 @@ export default function ResultsPage() {
           <HealthRatingPanel maturityLevel={report.maturityLevel} />
         </div>
 
-        <div className="mt-10">
-          <AIConsultantSection status={aiStatus} data={aiData} error={aiError} />
+        <div className="mt-16">
+          <SectionHeading
+            index={1}
+            icon={FileText}
+            title="Executive Summary"
+            subtitle="The headline read on this store’s program, in plain language."
+          />
+          <ExecutiveSummaryPanel
+            summary={report.executiveSummary}
+            aiStatus={aiStatus}
+            aiSummary={aiData?.executiveSummary}
+          />
         </div>
 
         <div className="mt-16">
           <SectionHeading
-            index={1}
+            index={2}
+            icon={AlertOctagon}
+            title="Biggest Revenue Leak"
+            subtitle="The single gap costing this store the most money right now."
+          />
+          <BiggestRevenueLeakPanel leak={report.biggestRevenueLeak} />
+        </div>
+
+        <div className="mt-16">
+          <SectionHeading
+            index={3}
+            icon={Zap}
+            title="Immediate Wins"
+            subtitle="The highest-leverage moves to make first."
+          />
+          <ImmediateWinsList wins={immediateWins} />
+        </div>
+
+        <div className="mt-16">
+          <SectionHeading
+            index={4}
             icon={Scale}
             title="Strengths & Weaknesses"
             subtitle="What’s working, and what’s holding your program back."
@@ -136,7 +177,7 @@ export default function ResultsPage() {
 
         <div className="mt-16">
           <SectionHeading
-            index={2}
+            index={5}
             icon={Target}
             title="Missed Opportunities"
             subtitle="Specific gaps and the points each one is costing you."
@@ -149,7 +190,7 @@ export default function ResultsPage() {
 
         <div className="mt-16">
           <SectionHeading
-            index={3}
+            index={6}
             icon={Workflow}
             title="Recommended Flows"
             subtitle="Automations we’d prioritize building next."
@@ -176,57 +217,22 @@ export default function ResultsPage() {
 
         <div className="mt-16">
           <SectionHeading
-            index={4}
-            icon={ListChecks}
-            title="Priority Tasks"
-            subtitle="Ranked by revenue impact — start from the top."
-          />
-          {report.priorityTasks.length > 0 ? (
-            <div className="space-y-4">
-              {report.priorityTasks.map((task, index) => (
-                <div key={task.id} className="flex items-start gap-4">
-                  <span className="mt-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-900 text-sm font-bold text-white">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    <RecommendationCard
-                      recommendation={{
-                        priority: task.priority,
-                        category: task.category,
-                        title: task.title,
-                        description: task.description,
-                        impact: `+${task.pointsAtStake} pts opportunity`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-ink-400">
-              No outstanding priority tasks — your program is fully optimized.
-            </p>
-          )}
-        </div>
-
-        <div className="mt-16">
-          <SectionHeading
-            index={5}
-            icon={TrendingUp}
-            title="Estimated Revenue Opportunity"
-            subtitle="A directional range based on the gaps identified above."
-          />
-          <RevenueOpportunityPanel revenueOpportunity={report.revenueOpportunity} />
-        </div>
-
-        <div className="mt-16">
-          <SectionHeading
-            index={6}
+            index={7}
             icon={Milestone}
-            title="Next Steps"
+            title="90-Day Growth Plan"
             subtitle="A simple sequence to work through the priorities above."
           />
-          <NextStepsTimeline steps={report.nextSteps} />
+          <GrowthPlanTimeline steps={report.growthPlan} />
+        </div>
+
+        <div className="mt-16">
+          <SectionHeading
+            index={8}
+            icon={TrendingUp}
+            title="Expected Revenue Growth"
+            subtitle="A directional range based on the gaps identified above."
+          />
+          <RevenueGrowthPanel revenueGrowth={report.revenueGrowth} />
         </div>
       </Container>
     </section>
