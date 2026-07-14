@@ -2,7 +2,7 @@ import { ClipboardList, UploadCloud, Plug, Lock } from 'lucide-react'
 
 const INPUT_METHODS = [
   { id: 'manual', label: 'Manual Audit', icon: ClipboardList },
-  { id: 'csv', label: 'CSV Upload', icon: UploadCloud, tag: 'Placeholder' },
+  { id: 'csv', label: 'CSV Upload', icon: UploadCloud },
   { id: 'connect', label: 'Connect Shopify & Klaviyo', icon: Plug, tag: 'Coming Soon' },
 ]
 
